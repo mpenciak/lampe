@@ -12,12 +12,13 @@ use fm::FileId;
 
 use itertools::Itertools;
 use noirc_frontend::{
+    Kind, ResolvedGeneric, StructField, Type, TypeBinding, TypeBindings,
     ast::{IntegerBitSize, Signedness},
     graph::CrateId,
     hir::{
+        Context,
         def_map::{ModuleData, ModuleDefId, ModuleId},
         type_check::generics::TraitGenerics,
-        Context,
     },
     hir_def::{
         expr::{HirArrayLiteral, HirExpression, HirIdent, HirLiteral},
@@ -28,7 +29,6 @@ use noirc_frontend::{
     node_interner::{
         DefinitionKind, ExprId, FuncId, GlobalId, StmtId, StructId, TraitId, TypeAliasId,
     },
-    Kind, ResolvedGeneric, StructField, Type, TypeBinding, TypeBindings,
 };
 
 use crate::{
@@ -425,7 +425,10 @@ impl LeanEmitter {
         let global_data = self.context.def_interner.get_global(global);
         let value = self.emit_statement(ind, global_data.let_statement, ctx)?;
 
-        Ok(format!("global {value}"))
+        // We know `value` will always be a let statement, so we trim the `let` and trailing `;`
+        let value = value.trim_start_matches("let ").trim_end_matches(';');
+
+        Ok(format!("nr_global {value}"))
     }
 
     /// Emits the Lean source code corresponding to a resolved generics occuring at generic declarations.
@@ -762,10 +765,8 @@ impl LeanEmitter {
                 Box::new(self.substitute_bindings(env, bindings)),
                 *unconstrained,
             ),
-            Type::TraitAsType(id, name, generics) => Type::TraitAsType(
-                id.clone(),
-                name.clone(),
-                TraitGenerics {
+            Type::TraitAsType(id, name, generics) => {
+                Type::TraitAsType(id.clone(), name.clone(), TraitGenerics {
                     ordered: generics
                         .ordered
                         .iter()
@@ -779,8 +780,8 @@ impl LeanEmitter {
                             typ: self.substitute_bindings(&t.typ, bindings),
                         })
                         .collect(),
-                },
-            ),
+                })
+            }
             Type::MutableReference(t) => {
                 Type::MutableReference(Box::new(self.substitute_bindings(t, bindings)))
             }

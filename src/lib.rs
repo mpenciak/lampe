@@ -125,12 +125,6 @@ mod test {
                 assert(x == 5);
             }
 
-            // global TEST = 1 + 7 + 3;
-            //
-            // fn use_global() -> Field {
-            //     TEST
-            // }
-
             struct Option2<T> {
                 _is_some: bool,
                 _value: T,
@@ -265,6 +259,35 @@ mod test {
                 let x = true;
                 print(x.foo());
             }
+        "#;
+
+        let source = Source::new(file_name, source);
+
+        // Create our project
+        let project = Project::new(Path::new(""), source);
+
+        // Execute the compilation step on our project.
+        let source = noir_to_lean(project)?.take();
+
+        println!("{source}");
+
+        Ok(())
+    }
+
+    #[test]
+    fn globals() -> anyhow::Result<()> {
+        let file_name = Path::new("main.nr");
+        let source = r#"
+        global FOO : Field = 42;
+
+        global FOOS : [Field ; 2] = [FOO, FOO + 1];
+
+        fn test_foo() -> Field {
+            FOO
+
+        fn test_foo() -> Field {
+            FOOS[1]
+        }
         "#;
 
         let source = Source::new(file_name, source);

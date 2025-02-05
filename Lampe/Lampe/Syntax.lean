@@ -623,4 +623,12 @@ elab "nr_struct_def" defName:nr_ident defn:nr_struct_def : command => do
   _ ← projs.mapM fun cmd => do
     Elab.Command.elabCommand cmd
 
+elab "nr_global" stmt:nr_expr ";" : command => do
+  match stmt with
+  | `(nr_expr | let $name = $expr ) => do
+    let blah := expr![expr]
+    let asdf ← `(def $name := $(← expr![$expr]))
+    Elab.Command.elabCommand asdf
+  | _ => throwUnsupportedSyntax
+
 end Lampe
